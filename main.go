@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,20 +14,30 @@ import (
 	"github.com/getlantern/systray"
 )
 
-const watchDir = "/Users/alien/Vault/Messages/"
+type Config struct {
+	Folder string `json:"folder"`
+}
+
+var watchDir string
+
 const empty = "[ ]"
 
 var lastFile string
 
 func main() {
+
+	cfg, err := loadConfig()
+	if err != nil || len(cfg.Folder) == 0 {
+		log.Fatalln("Ошибка загрузки config.json:", err)
+		return
+	}
+	watchDir = cfg.Folder
 	exePath, err := os.Executable()
 	if err != nil {
-		fmt.Println("Ошибка получения пути к бинарнику:", err)
+		log.Fatalln("Ошибка получения пути к бинарнику:", err)
 		return
 	}
 	lastMod := getModTime(exePath)
-
-	// Запускаем проверку обновлений в фоне
 	go func() {
 		for {
 			time.Sleep(2 * time.Second)
@@ -36,8 +48,8 @@ func main() {
 			}
 		}
 	}()
-
 	systray.Run(onReady, func() {})
+
 }
 
 func onReady() {
@@ -143,4 +155,22 @@ func isUpdated(path string, last time.Time) bool {
 
 	return info.ModTime().After(last)
 
+}
+
+func loadConfig() (Config, error) {
+
+	exePath, err := os.Executable()
+	if err != nil {
+		return Config{}, err
+	}
+	configPath := filepath.Join(filepath.Dir(exePath), "config.json")
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return Config{}, err
+	}
+	var cfg Config
+	err = json.Unmarshal(data, &cfg)
+
+	return cfg, err
 }

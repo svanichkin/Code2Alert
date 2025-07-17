@@ -6,7 +6,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
-            "output": "__debug_codealert"
+            "output": "__debug_code2alert"
         }
     ]
 }
