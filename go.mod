@@ -5,6 +5,7 @@ go 1.24.4
 require github.com/getlantern/systray v1.2.2
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect
 	github.com/getlantern/errors v0.0.0-20190325191628-abdb3e3e36f7 // indirect
@@ -14,5 +15,6 @@ require (
 	github.com/getlantern/ops v0.0.0-20190325191751-d70cb0d6f85f // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
+	github.com/pkg/xattr v0.4.12
 	golang.org/x/sys v0.13.0 // indirect
 )

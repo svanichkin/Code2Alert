@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -10,8 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/fsnotify/fsnotify"
 	"github.com/getlantern/systray"
+	"github.com/pkg/xattr"
 )
 
 type Config struct {
@@ -80,9 +83,8 @@ func watch() {
 			if event.Op&fsnotify.Create != 0 {
 				info, err := os.Stat(event.Name)
 				if err == nil && info.IsDir() {
-					err := watcher.Add(event.Name)
-					if err != nil {
-						fmt.Println("Ошибка добавления директории в watcher:", err)
+					if err := addDirRecursive(watcher, event.Name); err != nil {
+						fmt.Println("Ошибка рекурсивного добавления директории:", err)
 					}
 				} else {
 					processFile(event.Name)
@@ -93,6 +95,20 @@ func watch() {
 		}
 	}
 
+}
+
+func addDirRecursive(w *fsnotify.Watcher, root string) error {
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if err := w.Add(path); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func processFile(file string) {
@@ -113,6 +129,7 @@ func processFile(file string) {
 	if summary == "" {
 		return
 	}
+	summary = truncate(summary, 20)
 	systray.SetTitle("[ " + summary + " ]")
 	copyToClipboard(summary)
 	go func() {
@@ -122,25 +139,26 @@ func processFile(file string) {
 
 }
 
-func getXAttr(file, attr string) string {
+func truncate(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
+}
 
-	out, err := exec.Command("xattr", "-p", attr, file).Output()
+func getXAttr(file, attr string) string {
+	b, err := xattr.Get(file, attr)
 	if err != nil {
 		return ""
 	}
-
-	return strings.TrimSpace(string(out))
+	return strings.TrimSpace(string(b))
 }
 
 func copyToClipboard(text string) {
-
-	cmd := exec.Command("pbcopy")
-	in, _ := cmd.StdinPipe()
-	_ = cmd.Start()
-	_, _ = in.Write([]byte(text))
-	_ = in.Close()
-	_ = cmd.Wait()
-
+	if err := clipboard.WriteAll(text); err != nil {
+		log.Printf("clipboard error: %v\n", err)
+	}
 }
 
 func getModTime(path string) time.Time {
