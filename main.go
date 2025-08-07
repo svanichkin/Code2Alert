@@ -78,7 +78,15 @@ func watch() {
 		select {
 		case event := <-watcher.Events:
 			if event.Op&fsnotify.Create != 0 {
-				processFile(event.Name)
+				info, err := os.Stat(event.Name)
+				if err == nil && info.IsDir() {
+					err := watcher.Add(event.Name)
+					if err != nil {
+						fmt.Println("Ошибка добавления директории в watcher:", err)
+					}
+				} else {
+					processFile(event.Name)
+				}
 			}
 		case err := <-watcher.Errors:
 			fmt.Println("Ошибка watcher:", err)
