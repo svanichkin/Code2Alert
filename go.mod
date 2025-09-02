@@ -5,6 +5,12 @@ go 1.24.4
 require github.com/getlantern/systray v1.2.2
 
 require (
+	github.com/energye/systray v1.0.2 // indirect
+	github.com/godbus/dbus/v5 v5.0.4 // indirect
+	github.com/tevino/abool v0.0.0-20220530134649-2bfc934cb23c // indirect
+)
+
+require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect

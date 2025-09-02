@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
+	"github.com/energye/systray"
 	"github.com/fsnotify/fsnotify"
-	"github.com/getlantern/systray"
 	"github.com/pkg/xattr"
 )
 
@@ -57,7 +57,33 @@ func main() {
 
 func onReady() {
 	systray.SetTitle(empty)
+	systray.SetOnClick(func(menu systray.IMenu) {
+		onTrayClick()
+	})
 	go watch()
+}
+
+// Получить усечённый summary для файла
+func currentSummary(file string) string {
+	s := getXAttr(file, "summary")
+	if s == "" {
+		return ""
+	}
+	return truncate(s, 20)
+}
+
+func onTrayClick() {
+
+	if lastFile != "" {
+		if s := currentSummary(lastFile); s != "" {
+			if clip, err := clipboard.ReadAll(); err == nil && clip == s {
+				copyToClipboard(s)
+				return
+			}
+		}
+	}
+	showLatest()
+
 }
 
 func watch() {
@@ -98,6 +124,7 @@ func watch() {
 }
 
 func addDirRecursive(w *fsnotify.Watcher, root string) error {
+	
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -125,40 +152,102 @@ func processFile(file string) {
 	if xtype != "code" {
 		return
 	}
-	summary := getXAttr(file, "summary")
+	showCode(file)
+
+}
+
+func showCode(file string) {
+
+	summary := currentSummary(file)
 	if summary == "" {
 		return
 	}
-	summary = truncate(summary, 20)
 	systray.SetTitle("[ " + summary + " ]")
 	copyToClipboard(summary)
 	go func() {
 		time.Sleep(10 * time.Second)
 		systray.SetTitle(empty)
 	}()
+	
+}
+
+func showLatest() {
+
+	file := lastFile
+	if file == "" {
+		if f, ok := findLatestCodeFile(watchDir); ok {
+			file = f
+		}
+	}
+	if file == "" {
+		return
+	}
+	if _, err := os.Stat(file); err != nil {
+		if f, ok := findLatestCodeFile(watchDir); ok {
+			file = f
+		} else {
+			return
+		}
+	}
+	lastFile = file
+	showCode(file)
+
+}
+
+func findLatestCodeFile(root string) (string, bool) {
+
+	var latestPath string
+	var latestTime time.Time
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if getXAttr(path, "type") != "code" {
+			return nil
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil
+		}
+		if info.ModTime().After(latestTime) {
+			latestTime = info.ModTime()
+			latestPath = path
+		}
+		return nil
+	})
+	return latestPath, latestPath != ""
 
 }
 
 func truncate(s string, n int) string {
+
 	r := []rune(s)
 	if len(r) <= n {
 		return s
 	}
 	return string(r[:n]) + "…"
+
 }
 
 func getXAttr(file, attr string) string {
+
 	b, err := xattr.Get(file, attr)
 	if err != nil {
 		return ""
 	}
 	return strings.TrimSpace(string(b))
+
 }
 
 func copyToClipboard(text string) {
+
 	if err := clipboard.WriteAll(text); err != nil {
 		log.Printf("clipboard error: %v\n", err)
 	}
+	
 }
 
 func getModTime(path string) time.Time {
