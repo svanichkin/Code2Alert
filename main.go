@@ -124,7 +124,7 @@ func watch() {
 }
 
 func addDirRecursive(w *fsnotify.Watcher, root string) error {
-	
+
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -162,13 +162,20 @@ func showCode(file string) {
 	if summary == "" {
 		return
 	}
-	systray.SetTitle("[ " + summary + " ]")
+	if len([]rune(empty)) >= 2 {
+		left := string([]rune(empty)[0])
+		right := string([]rune(empty)[len([]rune(empty))-1])
+		systray.SetTitle(left + " " + summary + " " + right)
+	} else {
+		systray.SetTitle(summary)
+	}
 	copyToClipboard(summary)
 	go func() {
 		time.Sleep(10 * time.Second)
+		lastFile = ""
 		systray.SetTitle(empty)
 	}()
-	
+
 }
 
 func showLatest() {
@@ -247,7 +254,7 @@ func copyToClipboard(text string) {
 	if err := clipboard.WriteAll(text); err != nil {
 		log.Printf("clipboard error: %v\n", err)
 	}
-	
+
 }
 
 func getModTime(path string) time.Time {
