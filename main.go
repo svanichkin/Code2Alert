@@ -56,20 +56,23 @@ func main() {
 }
 
 func onReady() {
+
 	systray.SetTitle(empty)
 	systray.SetOnClick(func(menu systray.IMenu) {
 		onTrayClick()
 	})
 	go watch()
+
 }
 
-// Получить усечённый summary для файла
 func currentSummary(file string) string {
+
 	s := getXAttr(file, "summary")
 	if s == "" {
 		return ""
 	}
 	return truncate(s, 20)
+
 }
 
 func onTrayClick() {
@@ -147,11 +150,11 @@ func processFile(file string) {
 	if file == lastFile {
 		return
 	}
-	lastFile = file
 	xtype := getXAttr(file, "type")
 	if xtype != "code" {
 		return
 	}
+	lastFile = file
 	showCode(file)
 
 }
@@ -295,4 +298,5 @@ func loadConfig() (Config, error) {
 	err = json.Unmarshal(data, &cfg)
 
 	return cfg, err
+
 }
